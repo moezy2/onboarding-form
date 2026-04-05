@@ -1,0 +1,205 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "firstname": { "type": "string" },
+                            "lastname": { "type": "string" },
+                            "jobtitle": { "type": "string" },
+                            "department": { "type": "string" },
+                            "personalemail": { "type": "string" }
+                        }
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Create_User_in_Entra_ID": {
+                "runAfter": {},
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://graph.microsoft.com/v1.0/users",
+                    "method": "POST",
+                    "headers": { "Content-Type": "application/json" },
+                    "body": {
+                        "accountEnabled": true,
+                        "displayName": "@{concat(triggerBody()?['firstname'], ' ', triggerBody()?['lastname'])}",
+                        "givenName": "@{triggerBody()?['firstname']}",
+                        "surname": "@{triggerBody()?['lastname']}",
+                        "jobTitle": "@{triggerBody()?['jobtitle']}",
+                        "department": "@{triggerBody()?['department']}",
+                        "otherMails": [ "@{triggerBody()?['personalemail']}" ],
+                        "mailNickname": "@{concat(triggerBody()?['firstname'], '.', triggerBody()?['lastname'])}",
+                        "userPrincipalName": "@{concat(triggerBody()?['firstname'], '.', triggerBody()?['lastname'], '@YOUR_TENANT.onmicrosoft.com')}",
+                        "passwordProfile": {
+                            "forceChangePasswordNextSignIn": true,
+                            "password": "REPLACE_WITH_TEMP_PASSWORD"
+                        }
+                    },
+                    "authentication": {
+                        "type": "ActiveDirectoryOAuth",
+                        "tenant": "YOUR_TENANT_ID",
+                        "clientId": "YOUR_CLIENT_ID",
+                        "secret": "YOUR_CLIENT_SECRET",
+                        "audience": "https://graph.microsoft.com"
+                    }
+                }
+            },
+            "Add_to_Engineering_Group": {
+                "runAfter": { "Create_User_in_Entra_ID": ["Succeeded"] },
+                "type": "If",
+                "expression": { "and": [ { "equals": [ "@triggerBody()?['department']", "Engineering" ] } ] },
+                "actions": {
+                    "Add_Member_Engineering": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/groups/YOUR_ENGINEERING_GROUP_ID/members/$ref",
+                            "method": "POST",
+                            "headers": { "Content-Type": "application/json" },
+                            "body": "@{concat('{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/', body('Create_User_in_Entra_ID')?['id'], '\"}')}",
+                            "authentication": {
+                                "type": "ActiveDirectoryOAuth",
+                                "tenant": "YOUR_TENANT_ID",
+                                "clientId": "YOUR_CLIENT_ID",
+                                "secret": "YOUR_CLIENT_SECRET",
+                                "audience": "https://graph.microsoft.com"
+                            }
+                        }
+                    }
+                },
+                "else": { "actions": {} }
+            },
+            "Add_to_Finance_Group": {
+                "runAfter": { "Add_to_Engineering_Group": ["Succeeded", "Skipped"] },
+                "type": "If",
+                "expression": { "and": [ { "equals": [ "@triggerBody()?['department']", "Finance" ] } ] },
+                "actions": {
+                    "Add_Member_Finance": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/groups/YOUR_FINANCE_GROUP_ID/members/$ref",
+                            "method": "POST",
+                            "headers": { "Content-Type": "application/json" },
+                            "body": "@{concat('{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/', body('Create_User_in_Entra_ID')?['id'], '\"}')}",
+                            "authentication": {
+                                "type": "ActiveDirectoryOAuth",
+                                "tenant": "YOUR_TENANT_ID",
+                                "clientId": "YOUR_CLIENT_ID",
+                                "secret": "YOUR_CLIENT_SECRET",
+                                "audience": "https://graph.microsoft.com"
+                            }
+                        }
+                    }
+                },
+                "else": { "actions": {} }
+            },
+            "Add_to_HR_Group": {
+                "runAfter": { "Add_to_Finance_Group": ["Succeeded", "Skipped"] },
+                "type": "If",
+                "expression": { "and": [ { "equals": [ "@triggerBody()?['department']", "HR" ] } ] },
+                "actions": {
+                    "Add_Member_HR": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/groups/YOUR_HR_GROUP_ID/members/$ref",
+                            "method": "POST",
+                            "headers": { "Content-Type": "application/json" },
+                            "body": "@{concat('{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/', body('Create_User_in_Entra_ID')?['id'], '\"}')}",
+                            "authentication": {
+                                "type": "ActiveDirectoryOAuth",
+                                "tenant": "YOUR_TENANT_ID",
+                                "clientId": "YOUR_CLIENT_ID",
+                                "secret": "YOUR_CLIENT_SECRET",
+                                "audience": "https://graph.microsoft.com"
+                            }
+                        }
+                    }
+                },
+                "else": { "actions": {} }
+            },
+            "Add_to_IT_Group": {
+                "runAfter": { "Add_to_HR_Group": ["Succeeded", "Skipped"] },
+                "type": "If",
+                "expression": { "and": [ { "equals": [ "@triggerBody()?['department']", "IT" ] } ] },
+                "actions": {
+                    "Add_Member_IT": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/groups/YOUR_IT_GROUP_ID/members/$ref",
+                            "method": "POST",
+                            "headers": { "Content-Type": "application/json" },
+                            "body": "@{concat('{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/', body('Create_User_in_Entra_ID')?['id'], '\"}')}",
+                            "authentication": {
+                                "type": "ActiveDirectoryOAuth",
+                                "tenant": "YOUR_TENANT_ID",
+                                "clientId": "YOUR_CLIENT_ID",
+                                "secret": "YOUR_CLIENT_SECRET",
+                                "audience": "https://graph.microsoft.com"
+                            }
+                        }
+                    }
+                },
+                "else": { "actions": {} }
+            },
+            "Fallback_to_AllStaff": {
+                "runAfter": { "Add_to_IT_Group": ["Succeeded", "Skipped", "Failed"] },
+                "type": "If",
+                "expression": {
+                    "or": [
+                        { "equals": [ "@result('Add_to_Engineering_Group')?[0]?['status']", "Failed" ] },
+                        { "equals": [ "@result('Add_to_Finance_Group')?[0]?['status']", "Failed" ] },
+                        { "equals": [ "@result('Add_to_HR_Group')?[0]?['status']", "Failed" ] },
+                        { "equals": [ "@result('Add_to_IT_Group')?[0]?['status']", "Failed" ] }
+                    ]
+                },
+                "actions": {
+                    "Add_Member_AllStaff": {
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/groups/YOUR_ALLSTAFF_GROUP_ID/members/$ref",
+                            "method": "POST",
+                            "headers": { "Content-Type": "application/json" },
+                            "body": "@{concat('{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/', body('Create_User_in_Entra_ID')?['id'], '\"}')}",
+                            "authentication": {
+                                "type": "ActiveDirectoryOAuth",
+                                "tenant": "YOUR_TENANT_ID",
+                                "clientId": "YOUR_CLIENT_ID",
+                                "secret": "YOUR_CLIENT_SECRET",
+                                "audience": "https://graph.microsoft.com"
+                            }
+                        }
+                    }
+                },
+                "else": { "actions": {} }
+            },
+            "Send_Welcome_Email": {
+                "runAfter": { "Fallback_to_AllStaff": ["Succeeded", "Skipped"] },
+                "type": "Http",
+                "inputs": {
+                    "uri": "https://api.resend.com/emails",
+                    "method": "POST",
+                    "headers": {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer YOUR_RESEND_API_KEY"
+                    },
+                    "body": {
+                        "from": "Onboarding <onboarding@resend.dev>",
+                        "to": ["@{triggerBody()?['personalemail']}"],
+                        "subject": "Welcome to the organisation",
+                        "text": "@{concat('Hi ', triggerBody()?['firstname'], ',\n\nYour account has been created.\n\nUsername: ', triggerBody()?['firstname'], '.', triggerBody()?['lastname'], '@YOUR_TENANT.onmicrosoft.com\nTemporary password: REPLACE_WITH_TEMP_PASSWORD\n\nPlease log in and change your password immediately.\n\nWelcome aboard.')}"
+                    }
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {}
+    },
+    "parameters": {}
+}
