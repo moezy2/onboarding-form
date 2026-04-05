@@ -4,6 +4,14 @@ Automated employee onboarding system built on Azure Logic Apps and Microsoft Ent
 
 ---
 
+## Architecture
+
+![Architecture Diagram](architecture.png)
+
+The diagram illustrates the full end-to-end workflow: a GitHub Pages form submits employee details via an authenticated REST API call to an Azure Logic App HTTP trigger, which provisions the user in Entra ID via Microsoft Graph API, routes them to their department security group, and sends a welcome email via Resend API.
+
+---
+
 ## Overview
 
 This project replaces a manual IT onboarding process with a fully automated workflow. HR or a line manager fills in a simple web form and the system handles everything end to end — no IT involvement required for routine account creation.
@@ -11,38 +19,9 @@ This project replaces a manual IT onboarding process with a fully automated work
 **What it does:**
 
 - Creates a new user account in Microsoft Entra ID with all standard attributes
-- Assigns the user to the correct security group based on their department
-- Falls back to an AllStaff group if the department group assignment fails
+- Assigns the user to the correct security group based on their department (Engineering, Finance, HR, IT)
+- Falls back to an AllStaff group if the department group assignment fails for any reason
 - Sends a welcome email to the employee's personal address with their username and temporary password
-
----
-
-## Architecture
-
-```
-GitHub Pages Form
-      |
-      | HTTP POST (JSON)
-      v
-Azure Logic App (HTTP Trigger)
-      |
-      v
-[1] Create User — Microsoft Graph API POST /users
-      |
-      v
-[2] Department Routing (If conditions)
-      |
-      +-- Engineering → Security Group
-      +-- Finance     → Security Group
-      +-- HR          → Security Group
-      +-- IT          → Security Group
-      +-- (any fail)  → AllStaff (fallback)
-      |
-      v
-[3] Send Welcome Email — Resend API
-```
-
-The architecture diagram is included in this repository as `architecture.drawio`. Open it at [draw.io](https://draw.io) or with the draw.io VS Code extension.
 
 ---
 
@@ -53,7 +32,7 @@ The architecture diagram is included in this repository as `architecture.drawio`
 | Workflow engine | Azure Logic Apps (Consumption) |
 | Identity provider | Microsoft Entra ID |
 | Graph API | Microsoft Graph v1.0 |
-| Authentication | App Registration (Service Principal) |
+| Authentication | App Registration (Service Principal / OAuth 2.0) |
 | Email delivery | Resend API |
 | Onboarding form | GitHub Pages (HTML/CSS/JS) |
 
@@ -64,9 +43,39 @@ The architecture diagram is included in this repository as `architecture.drawio`
 ```
 /
 ├── README.md                  — This file
-├── architecture.drawio        — Architecture diagram (open in draw.io)
+├── architecture.png           — Architecture diagram
+├── architecture.drawio        — Editable architecture diagram (draw.io)
 ├── onboarding-form.html       — Web form hosted on GitHub Pages
-└── logic-app-workflow.json    — Logic App workflow definition
+└── logic-app-workflow.json    — Logic App workflow definition (sanitised)
+```
+
+---
+
+## How It Works
+
+```
+1. User submits form on GitHub Pages
+         |
+         | Authenticated REST API Call (JSON via Fetch API)
+         v
+2. Azure Logic App HTTP Trigger receives payload
+         |
+         | POST /v1.0/users
+         v
+3. Microsoft Graph API creates user in Entra ID
+         |
+         | Department routing (If condition)
+         v
+4. User added to department security group
+         |-- Engineering  →  POST /groups/{id}/members/$ref
+         |-- Finance      →  POST /groups/{id}/members/$ref
+         |-- HR           →  POST /groups/{id}/members/$ref
+         |-- IT           →  POST /groups/{id}/members/$ref
+         |-- (failure)    →  AllStaff fallback group (dashed path)
+         |
+         | POST /emails
+         v
+5. Welcome email sent to employee's personal address via Resend API
 ```
 
 ---
@@ -137,17 +146,30 @@ Before deploying, you need:
 
 ## Security Group Routing
 
-The workflow checks the submitted department value and adds the user to the corresponding group:
+The workflow evaluates the submitted department value and adds the user to the corresponding Entra ID security group:
 
-| Department | Group |
+| Department | Target Group | Fallback |
+|---|---|---|
+| Engineering | Engineering security group | AllStaff |
+| Finance | Finance security group | AllStaff |
+| HR | HR security group | AllStaff |
+| IT | IT Department security group | AllStaff |
+
+The AllStaff fallback triggers if the primary group assignment fails for any reason (transient Graph API error, group deleted, permissions issue). This ensures every provisioned user is always in at least one group.
+
+---
+
+## Graph API Permissions
+
+The app registration requires the following **application permissions** with admin consent granted:
+
+| Permission | Purpose |
 |---|---|
-| Engineering | Engineering security group |
-| Finance | Finance security group |
-| HR | HR security group |
-| IT | IT Department security group |
-| Any failure | AllStaff (fallback) |
+| `User.ReadWrite.All` | Create and manage user accounts in Entra ID |
+| `GroupMember.ReadWrite.All` | Add users to security groups |
+| `Mail.Send` | Send email on behalf of a mailbox (if using Graph for email) |
 
-The fallback triggers if the primary group assignment fails for any reason (e.g. transient Graph API error, group deleted). This ensures every provisioned user is always in at least one group.
+Authentication uses the **Client Credentials** OAuth 2.0 flow via the app registration service principal. The Logic App is not tied to any individual user account.
 
 ---
 
@@ -179,6 +201,7 @@ The employee receives an email to their personal address containing:
 - The temporary password in the workflow definition should be treated as a secret. Consider moving it to an Azure Key Vault reference for production use.
 - The GitHub Pages form does not store any data — it only POSTs to the Logic App trigger URL and displays the response.
 - The Logic App trigger URL contains a SAS token. Treat it as a secret and do not commit it to a public repository without access controls.
+- The sanitised `logic-app-workflow.json` in this repository has all secrets replaced with placeholder values. Never commit live credentials to version control.
 
 ---
 
@@ -186,7 +209,7 @@ The employee receives an email to their personal address containing:
 
 - Resend free tier sends from `onboarding@resend.dev`. For production, verify a custom domain in Resend and update the `from` field in the workflow.
 - The onmicrosoft.com domain is used for UPNs. If your organisation has a verified custom domain in Entra ID, update the UPN suffix accordingly.
-- Guest accounts in Entra ID cannot send email via Graph API. A licensed member account or Resend is required for email delivery.
+- Guest accounts in Entra ID cannot send email via Graph API. A licensed member account or a third-party email provider such as Resend is required for email delivery.
 
 ---
 
@@ -198,6 +221,7 @@ The employee receives an email to their personal address containing:
 - Add a manager notification email on successful provisioning
 - Integrate with Microsoft Teams to post a welcome message to a new starters channel
 - Add input validation in the Logic App to reject malformed requests before attempting user creation
+- Move the onboarding form behind authentication so only authorised staff can submit it
 
 ---
 
