@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Employee Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --border: #e2e0d8;
+    --border-strong: #c8c6bc;
+    --text-primary: #1a1916;
+    --text-secondary: #6b6960;
+    --text-muted: #9e9c94;
+    --accent: #1a1916;
+    --success-bg: #edf7ed;
+    --success-text: #1e5c1e;
+    --success-border: #b8dbb8;
+    --error-bg: #fdf0f0;
+    --error-text: #7a1f1f;
+    --error-border: #f0c0c0;
+    --info-bg: #f0f4fd;
+    --info-text: #1a3a7a;
+    --info-border: #c0cff0;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .page-wrap { width: 100%; max-width: 480px; }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brand-mark svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .brand-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+  }
+
+  .card-header {
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+
+  .card-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .field { margin-bottom: 1.1rem; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.1rem;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input, select {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236b6960' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,25,22,0.08);
+    background: #fff;
+  }
+
+  input::placeholder { color: var(--text-muted); }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .submit-btn {
+    width: 100%;
+    height: 44px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: -0.01em;
+  }
+
+  .submit-btn:hover { opacity: 0.85; }
+  .submit-btn:active { transform: scale(0.99); }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .status {
+    margin-top: 1rem;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .status.success { display: block; background: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-border); }
+  .status.error { display: block; background: var(--error-bg); color: var(--error-text); border: 1px solid var(--error-border); }
+  .status.loading { display: block; background: var(--info-bg); color: var(--info-text); border: 1px solid var(--info-border); }
+
+  .footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 420px) {
+    .field-row { grid-template-columns: 1fr; }
+    .card { padding: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 16 16">
+        <path d="M8 2v5M5 5l3-3 3 3M4 10h8M4 13h5"/>
+      </svg>
+    </div>
+    <span class="brand-name">People &amp; Operations</span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <p class="card-title">New employee onboarding</p>
+      <p class="card-sub">Fill in the details below to provision an account, assign the correct security group, and send a welcome email automatically.</p>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>First name</label>
+        <input type="text" id="firstname" placeholder="Jane" autocomplete="given-name" />
+      </div>
+      <div class="field">
+        <label>Last name</label>
+        <input type="text" id="lastname" placeholder="Doe" autocomplete="family-name" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Job title</label>
+      <input type="text" id="jobtitle" placeholder="e.g. Software Engineer" />
+    </div>
+
+    <div class="field">
+      <label>Department</label>
+      <select id="department">
+        <option value="">Select a department</option>
+        <option value="Engineering">Engineering</option>
+        <option value="Finance">Finance</option>
+        <option value="HR">HR</option>
+        <option value="IT">IT</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Personal email</label>
+      <input type="email" id="personalemail" placeholder="jane.doe@gmail.com" autocomplete="email" />
+    </div>
+
+    <hr class="divider" />
+
+    <button class="submit-btn" id="submit-btn" onclick="submitForm()">Create account &rarr;</button>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <p class="footer">Powered by Azure Logic Apps &middot; Entra ID</p>
+</div>
+
+<script>
+  const LOGIC_APP_URL = "https://prod-51.uksouth.logic.azure.com:443/workflows/1d78ca6646794c92b5402eba4e45d399/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sr4mKLSunU7cilGS2KD6UmeccnqeBwsLZ59pruX0Cqs";
+
+  async function submitForm() {
+    const firstname = document.getElementById('firstname').value.trim();
+    const lastname = document.getElementById('lastname').value.trim();
+    const jobtitle = document.getElementById('jobtitle').value.trim();
+    const department = document.getElementById('department').value;
+    const personalemail = document.getElementById('personalemail').value.trim();
+    const btn = document.getElementById('submit-btn');
+
+    if (!firstname || !lastname || !jobtitle || !department || !personalemail) {
+      showStatus('error', 'Please complete all fields before submitting.');
+      return;
+    }
+
+    if (!personalemail.includes('@')) {
+      showStatus('error', 'Please enter a valid email address.');
+      return;
+    }
+
+    btn.disabled = true;
+    showStatus('loading', 'Creating account, please wait...');
+
+    try {
+      const res = await fetch(LOGIC_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstname, lastname, jobtitle, department, personalemail })
+      });
+
+      if (res.ok || res.status === 202) {
+        showStatus('success', `Account created for ${firstname} ${lastname}. A welcome email has been sent to ${personalemail} with login details.`);
+        clearForm();
+      } else {
+        showStatus('error', `Something went wrong (${res.status}). Please try again or contact IT.`);
+      }
+    } catch (err) {
+      showStatus('error', 'Could not reach the onboarding service. Please check your connection and try again.');
+    }
+
+    btn.disabled = false;
+  }
+
+  function showStatus(type, msg) {
+    const s = document.getElementById('status');
+    s.className = 'status ' + type;
+    s.textContent = msg;
+  }
+
+  function clearForm() {
+    ['firstname', 'lastname', 'jobtitle', 'personalemail'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('department').value = '';
+  }
+</script>
+</body>
+</html>
